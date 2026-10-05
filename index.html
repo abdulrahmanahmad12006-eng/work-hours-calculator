@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Cost Calculator | Price in Work Hours</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <!-- html2canvas for downloadable PNG share card -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-wrapper">
+        <span class="logo-icon">⏳</span>
+        <div>
+          <h1 class="app-title">Time Cost</h1>
+          <p class="app-subtitle">Measure purchases in your life's working hours</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="themeToggleBtn" class="btn-ghost btn-icon-only" type="button" aria-label="Toggle dark/light mode" title="Toggle theme">
+          <span id="themeIcon">☀️</span>
+        </button>
+        <button id="editSalaryBtn" class="btn-ghost" type="button" aria-label="Edit salary settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <span>Edit salary</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Setup / Edit Screen -->
+    <section id="setupView" class="card setup-card hidden">
+      <div class="card-header">
+        <h2 id="setupHeading" class="section-title">Salary &amp; Work Hours Setup</h2>
+        <p class="section-desc">Enter your work details to calculate your hourly wage. Saved locally on your device.</p>
+      </div>
+
+      <form id="setupForm" novalidate>
+        <div class="form-group">
+          <label for="monthlySalary">Monthly take-home salary (after tax)</label>
+          <div class="input-with-affix">
+            <span class="affix prefix">EGP</span>
+            <input
+              type="number"
+              id="monthlySalary"
+              name="monthlySalary"
+              placeholder="e.g. 25000"
+              min="1"
+              step="any"
+              required
+              inputmode="decimal"
+            >
+          </div>
+          <span class="field-hint">Your net monthly earnings in Egyptian Pounds</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="weeklyHours">Hours per Week</label>
+            <div class="input-with-affix">
+              <input
+                type="number"
+                id="weeklyHours"
+                name="weeklyHours"
+                placeholder="40"
+                min="1"
+                max="168"
+                step="any"
+                required
+                inputmode="decimal"
+              >
+              <span class="affix suffix">hrs</span>
+            </div>
+            <span class="field-hint">Standard full-time is 40</span>
+          </div>
+
+          <div class="form-group">
+            <label for="weeklyDays">Days per Week</label>
+            <div class="input-with-affix">
+              <input
+                type="number"
+                id="weeklyDays"
+                name="weeklyDays"
+                placeholder="5"
+                min="1"
+                max="7"
+                step="any"
+                required
+                inputmode="decimal"
+              >
+              <span class="affix suffix">days</span>
+            </div>
+            <span class="field-hint">Usually 5 or 6 days</span>
+          </div>
+        </div>
+
+        <div id="setupError" class="alert-error hidden" role="alert"></div>
+
+        <div class="form-actions">
+          <button type="submit" id="saveSalaryBtn" class="btn btn-primary">
+            Save &amp; Continue
+          </button>
+          <button type="button" id="cancelEditBtn" class="btn btn-secondary hidden">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Main Calculator Screen -->
+    <main id="mainView" class="main-content hidden">
+
+      <!-- Running Total: "You've saved X hours of work by not buying stuff" -->
+      <section id="savingsRunningHero" class="savings-running-banner hidden">
+        <div class="savings-content">
+          <span class="savings-trophy">🎉</span>
+          <div class="savings-text-group">
+            <div class="savings-text" id="skippedPrimaryText">
+              You've saved <strong id="skippedHoursTotal">0.0</strong> hours of work by not buying stuff.
+            </div>
+            <div class="savings-sub" id="skippedDetailsSubtitle">
+              That's <span id="skippedDaysTotal">0.0 days</span> of freedom &amp; <span id="skippedMoneyTotal">0 EGP</span> kept in your pocket!
+            </div>
+          </div>
+        </div>
+        <button type="button" id="toggleSavedHistoryBtn" class="btn-history-pill">
+          <span>Saved history (<span id="skippedCountBadge">0</span>)</span>
+          <span id="historyChevron" class="chevron">▼</span>
+        </button>
+      </section>
+
+      <!-- Expandable Saved History (Skipped Purchases) Card -->
+      <section id="savedHistoryCard" class="card history-card hidden">
+        <div class="history-card-header">
+          <div class="history-title-group">
+            <span class="history-icon">🏆</span>
+            <div>
+              <h2 class="section-title">Saved History (Skipped Purchases)</h2>
+              <p class="section-desc">Smart decisions that preserved your time and hard-earned income.</p>
+            </div>
+          </div>
+          <button type="button" id="closeHistoryCardBtn" class="btn-ghost-sm" aria-label="Close history">✕ Close</button>
+        </div>
+        <div id="savedHistoryList" class="history-items-list">
+          <!-- Populated via JavaScript -->
+        </div>
+      </section>
+
+      <!-- User Salary Quick Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-pill">
+          <span class="stat-label">Salary:</span>
+          <span id="displaySalary" class="stat-value">— EGP</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Hourly Wage:</span>
+          <span id="displayHourlyWage" class="stat-value">— EGP/hr</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Hours/Week:</span>
+          <span id="displayWeeklyHours" class="stat-value">—</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Days/Week:</span>
+          <span id="displayWeeklyDays" class="stat-value">—</span>
+        </div>
+      </div>
+
+      <!-- Big Price Input Card -->
+      <section class="card price-card">
+
+        <div class="cost-type-selector" aria-label="Purchase type">
+          <button type="button" class="cost-type-btn active" id="typeOneTimeBtn" data-type="onetime"><span>One-time</span></button>
+          <button type="button" class="cost-type-btn" id="typeInstallmentBtn" data-type="installment"><span>Installments</span></button>
+          <button type="button" class="cost-type-btn" id="typeRecurringBtn" data-type="recurring"><span>Subscription</span></button>
+        </div>
+
+        <label for="productPrice" id="priceInputLabel" class="price-label">Product Price</label>
+
+        <div class="price-input-container">
+          <span id="currencyPrefix" class="currency-tag">EGP</span>
+          <input
+            type="number"
+            id="productPrice"
+            placeholder="0"
+            min="0"
+            step="any"
+            inputmode="decimal"
+            autocomplete="off"
+            autofocus
+          >
+          <span id="currencySuffix" class="currency-suffix hidden">/mo</span>
+          <button type="button" id="clearPriceBtn" class="btn-clear hidden" aria-label="Clear price">✕</button>
+        </div>
+
+        <div id="installmentTerm" class="installment-term hidden">
+          <label for="installmentMonths">Paying over</label>
+          <div class="installment-term-input">
+            <input type="number" id="installmentMonths" min="1" max="120" step="1" inputmode="numeric" placeholder="e.g. 12">
+            <span>months</span>
+          </div>
+          <p class="field-hint">Enter the total you’ll pay, including fees. Monthly payments are estimated evenly.</p>
+        </div>
+
+        <!-- Quick preset buttons -->
+        <div class="quick-presets">
+          <span class="presets-label">Quick test:</span>
+          <button type="button" class="preset-chip" data-amount="150">150</button>
+          <button type="button" class="preset-chip" data-amount="500">500</button>
+          <button type="button" class="preset-chip" data-amount="1500">1,500</button>
+          <button type="button" class="preset-chip" data-amount="5000">5,000</button>
+          <button type="button" class="preset-chip" data-amount="15000">15,000</button>
+        </div>
+
+        <!-- Wishlist Quick Save Bar -->
+        <div class="wishlist-save-bar">
+          <div class="item-name-input-wrapper">
+            <span class="item-icon">🏷️</span>
+            <input
+              type="text"
+              id="wishlistItemName"
+              placeholder="Item name (e.g. iPhone 15, Headphones, Gym)"
+              maxlength="60"
+              autocomplete="off"
+            >
+          </div>
+          <button type="button" id="saveWishlistBtn" class="btn btn-wishlist">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Save to wishlist</span>
+          </button>
+        </div>
+        <div id="saveFeedback" class="save-feedback hidden"></div>
+
+      </section>
+
+      <!-- Output Results Section -->
+      <section id="resultsSection" class="results-container">
+
+        <!-- Empty State Prompt -->
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">🏷️</div>
+          <p class="empty-title">Type a price to calculate</p>
+          <p class="empty-desc">For installments, enter the total price and how many months you’ll pay.</p>
+        </div>
+
+        <!-- Results Grid (3 cards: hours, days, % of salary) -->
+        <div id="resultsGrid" class="results-grid hidden">
+
+          <!-- Hours Card (Primary AHA moment) -->
+          <div class="result-card primary-card aha-card">
+            <div class="result-meta">
+              <span id="resultHoursBadge" class="result-badge">Time Needed</span>
+              <span class="result-icon">⏱️</span>
+            </div>
+            <div class="result-number-group">
+              <span id="resultHours" class="result-number-hero">0</span>
+              <span class="result-unit-hero">hours</span>
+            </div>
+            <p id="resultHoursDetailed" class="result-detail">0 hrs 0 mins</p>
+          </div>
+
+          <!-- Work Days Card -->
+          <div class="result-card">
+            <div class="result-meta">
+              <span id="resultDaysBadge" class="result-badge">Work Days</span>
+              <span class="result-icon">📅</span>
+            </div>
+            <div class="result-number-group">
+              <span id="resultDays" class="result-number">0</span>
+              <span class="result-unit">days</span>
+            </div>
+            <p id="resultDaysDetailed" class="result-detail">Based on your working schedule</p>
+          </div>
+
+          <!-- Salary % Card -->
+          <div class="result-card">
+            <div class="result-meta">
+              <span class="result-badge">% of Salary</span>
+              <span class="result-icon">📊</span>
+            </div>
+            <div class="result-number-group">
+              <span id="resultPercent" class="result-number">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div id="resultProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <p id="resultPercentDetailed" class="result-detail">of monthly income</p>
+          </div>
+
+        </div>
+
+        <!-- Human Takeaway Summary Banner with Share Button -->
+        <div id="summaryBanner" class="summary-banner-box hidden">
+          <p id="summaryText" class="summary-text"></p>
+          <div class="summary-actions">
+            <button type="button" id="shareCardBtn" class="btn btn-share" title="Download image card without salary info">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                <polyline points="16 6 12 2 8 6"></polyline>
+                <line x1="12" y1="2" x2="12" y2="15"></line>
+              </svg>
+              <span>Share Card (PNG)</span>
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- COMPARE MODE BAR CHART CARD -->
+      <section id="compareBarChartCard" class="card compare-chart-card hidden">
+        <div class="compare-chart-header">
+          <div class="chart-title-wrap">
+            <span class="chart-icon">📊</span>
+            <div>
+              <h2 class="section-title">Wishlist Comparison Chart</h2>
+              <p class="section-desc">Comparing work-hours across your selected items</p>
+            </div>
+          </div>
+          <button type="button" id="closeCompareChartBtn" class="btn-ghost-sm" aria-label="Close chart">✕ Close</button>
+        </div>
+
+        <!-- The Visual Bar Chart Container -->
+        <div id="compareChartBody" class="compare-chart-body">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Chart Insight Takeaway -->
+        <div id="compareTakeaway" class="compare-takeaway"></div>
+      </section>
+
+      <!-- WISHLIST SECTION -->
+      <section id="wishlistSection" class="card wishlist-card">
+        <div class="wishlist-header">
+          <div class="wishlist-title-group">
+            <span class="wishlist-icon">🔖</span>
+            <div>
+              <h2 class="section-title">My Wishlist</h2>
+              <p class="section-desc">Track desired items and cool off before spending your time.</p>
+            </div>
+          </div>
+
+          <div class="wishlist-header-actions">
+            <button type="button" id="compareActionBtn" class="btn-compare-action hidden">
+              <span>📊 Compare (<span id="compareSelectedCount">0</span>/4)</span>
+            </button>
+            <div class="wishlist-total-pills">
+              <div class="wishlist-total-pill" id="wishlistOneTimePill">
+                <span class="wishlist-total-label">One-time:</span>
+                <span id="wishlistTotalHours" class="wishlist-total-val">0.0 hrs</span>
+              </div>
+              <div class="wishlist-total-pill hidden" id="wishlistRecurringPill">
+                <span class="wishlist-total-label">Per month:</span>
+                <span id="wishlistRecurringHours" class="wishlist-total-val">0.0 hrs/mo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compare Instructions Tooltip Banner -->
+        <div id="comparePromptBar" class="compare-prompt-bar hidden">
+          <span class="prompt-icon">ℹ️</span>
+          <span class="prompt-text">Select 2 to 4 items below to compare their work-hours side by side.</span>
+          <button type="button" id="quickSelectTopBtn" class="btn-quick-compare">Select First 2</button>
+        </div>
+
+        <!-- Wishlist Overview Bar -->
+        <div id="wishlistTotalBar" class="wishlist-total-groups hidden">
+          <div id="wishlistOneTimeTotals" class="wishlist-total-block">
+            <span class="total-group-caption">One-time purchases</span>
+            <div class="wishlist-total-bar">
+              <div class="total-metric">
+                <span class="total-sub">Items</span>
+                <strong id="wishlistCount">0</strong>
+              </div>
+              <div class="total-metric">
+                <span class="total-sub">Total Work Days</span>
+                <strong id="wishlistTotalDays">0.0 days</strong>
+              </div>
+              <div class="total-metric">
+                <span class="total-sub">Total Cost</span>
+                <strong id="wishlistTotalCost">0 EGP</strong>
+              </div>
+            </div>
+          </div>
+          <div id="wishlistRecurringTotals" class="wishlist-total-block hidden">
+            <span class="total-group-caption">Monthly subscriptions</span>
+            <div class="wishlist-total-bar">
+              <div class="total-metric">
+                <span class="total-sub">Items</span>
+                <strong id="wishlistRecurringCount">0</strong>
+              </div>
+              <div class="total-metric">
+                <span class="total-sub">Work Days / Month</span>
+                <strong id="wishlistRecurringDays">0.0 days/mo</strong>
+              </div>
+              <div class="total-metric">
+                <span class="total-sub">Cost / Month</span>
+                <strong id="wishlistRecurringCost">0 EGP/mo</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="wishlistEmpty" class="wishlist-empty">
+          <span class="empty-icon-sm">💡</span>
+          <p class="empty-text">Your wishlist is empty. Enter an item name and price above, then click <strong>Save to wishlist</strong>.</p>
+          <button type="button" id="demoWishlistBtn" class="btn-demo-test">
+            <span>➕ Add demo items (for 7+ days cool-off &amp; comparison test)</span>
+          </button>
+        </div>
+
+        <!-- Wishlist Items Container -->
+        <div id="wishlistItemsList" class="wishlist-items-list hidden">
+          <!-- Dynamically populated -->
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer with Reset All Data -->
+    <footer class="app-footer">
+      <div class="footer-math">
+        <p>Formula: <code>Hourly Wage = Monthly Take-Home ÷ (Weekly Hours × 52 / 12)</code></p>
+      </div>
+      <p class="footer-note">All settings, wishlist items, and savings history are private and stored locally in your browser.</p>
+
+      <div class="footer-reset-wrapper">
+        <button type="button" id="resetAllDataBtn" class="btn-reset-data">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+          </svg>
+          <span>Reset all data</span>
+        </button>
+      </div>
+    </footer>
+
+    <!-- Custom Confirmation Modal for Reset -->
+    <div id="resetConfirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-icon-wrap">⚠️</div>
+          <h3 id="modalTitle" class="modal-title">Reset all data?</h3>
+        </div>
+        <p class="modal-body">
+          This will permanently delete your salary setup, weekly hours, wishlist items, and skipped purchases history from your browser.
+        </p>
+        <p class="modal-warning">This action cannot be undone.</p>
+        <div class="modal-actions">
+          <button type="button" id="cancelResetBtn" class="btn btn-secondary">Cancel</button>
+          <button type="button" id="confirmResetBtn" class="btn btn-danger">Yes, delete everything</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden Dedicated Card for html2canvas PNG Generation (No Salary Included) -->
+    <div id="shareCardContainer" class="share-card-offscreen" aria-hidden="true">
+      <div class="share-card-element" id="shareCardElement">
+        <div class="share-card-top">
+          <span class="share-card-logo">⏳ TIME COST</span>
+          <span class="share-card-badge">Measured in Life Hours</span>
+        </div>
+        <div class="share-card-main">
+          <div class="share-card-statement">
+            <span class="share-item-name" id="shareItemName">Product</span>
+            <span class="share-highlight-hours" id="shareItemHours">0 hours</span>
+            <span class="share-suffix">of my life</span>
+          </div>
+          <div class="share-card-meta">
+            <div class="share-meta-chip">
+              <span class="share-chip-label">Work Days</span>
+              <strong class="share-chip-val" id="shareMetaDays">0 days</strong>
+            </div>
+            <div class="share-meta-chip">
+              <span class="share-chip-label">Price</span>
+              <strong class="share-chip-val" id="shareMetaPrice">0 EGP</strong>
+            </div>
+          </div>
+        </div>
+        <div class="share-card-footer">
+          <span>Think in work hours, not just money.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
